@@ -1,0 +1,41 @@
+/*
+|=====================================================================================|
+|...................Style for Customer search auto suggestion.........................|
+|=====================================================================================|
+*/
+#search-box
+{
+	display:none;
+	height:auto;
+	max-height:200px;
+	overflow:hidden;
+	position:absolute;
+	border:1px solid #738fbc;
+	padding:8px 5px;
+	width:300px;
+	max-width:300px;
+	z-index:1000;
+	
+}
+#search-box:hover
+{
+	overflow:auto;
+	
+}
+#search-box .auto_complete
+{
+	
+}
+
+#search-box ul.search_result li
+{
+	list-style-type:none;
+	background:rgba(84, 85, 86,.5);
+}
+
+#search-box ul.search_result li:hover
+{
+		background:rgba(84, 85, 86,.9);
+		color:white;
+		cursor:pointer;
+}
