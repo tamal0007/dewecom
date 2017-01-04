@@ -1,12 +1,28 @@
 <script type="text/javascript">
 var base_url='<?php echo base_url(); ?>';
 var total_amount=0;
+var sub_total=0;
 
+function field_click_to_alter(this_,alter_field_id)
+{
+    var transfer_amount=$('#'+alter_field_id).val();
+    if(this_.val()==0)
+    { 
+        this_.val(transfer_amount);
+        $('#'+alter_field_id).val(0);      
+    } 
+}
+
+function payment_receive(this_,due_field_id)
+{
+    amount=this_.val()<=0?0:parseFloat(this_.val());
+    $('#'+due_field_id).val(parseFloat(total_amount)-parseFloat(amount));
+}
 
 function make_unit_type_option_menu()
 {
-    var selectValues={<?php echo $unit_type_js_array; ?>}
-    var out_put='<select name="cbo_unit_type">';
+    var selectValues={<?php echo $unit_type_js_array; ?>};
+    var out_put='<select name="cbo_unit_type[]">';
     $.each(selectValues, function(key, value) 
     {   
         out_put+='<option value="'+key+'">'+value+'</option>';
@@ -40,17 +56,52 @@ function row_total(row)
 
     row.closest('tr.purchase_row').find('td > span.row_total').html(purchase_cost*purchase_qty);
 }
+function ptc_to_amount(this_,target_field_id)
+{
+    if(sub_total>0)
+    {
+    target_field_id=$('#'+target_field_id);
+    var value=parseFloat(this_.val())<=0?0:parseFloat(this_.val());
+    target_field_id.val(parseFloat(sub_total)*(value/100));
+    grand_total();
+    }
+}
+
+function amount_to_ptc(this_,target_field_id)
+{
+    target_field_id=$('#'+target_field_id);
+    var value=this_.val()<=0?0:parseFloat(this_.val());
+    target_field_id.val((value*100)/sub_total);
+}
 
 function grand_total()
 {
+    var discount_tk=$('#txt_discount_tk').val()<=0?0:parseFloat($('#txt_discount_tk').val());
+    var vat_tk=$('#txt_vat_tk').val()<=0?0:parseFloat($('#txt_vat_tk').val());
+    var tax_tk=$('#txt_tax_tk').val()<=0?0:parseFloat($('#txt_tax_tk').val());
+    //var txt_due=$('#txt_due').val();
+    
     console.log("grand_total");
     var total=0;
     $('.row_total').each(function(){
         total+=parseFloat($(this).html());
     });
-    $('.grand_total').html(total);
-    $('.sub_total_hidden').val(total);
-
+    total=parseFloat(total);
+    sub_total=total;
+    console.log("1->"+total);
+    total-=discount_tk;
+        
+    total+=vat_tk;
+        
+    total+=tax_tk;
+    total_amount=total;
+    //$('.grand_total').html(total);
+    $('#txt_total').val(total);
+    $('#txt_due').val(total);
+    $('.sub_total_hidden').val(sub_total);
+    amount_to_ptc($('#txt_discount_tk'),'txt_discount_perct');
+    amount_to_ptc($('#txt_vat_tk'),'txt_vat_perct');
+    amount_to_ptc($('#txt_tax_tk'),'txt_tax_perct');
 
 }
 
@@ -174,14 +225,14 @@ function on_search_item_click(item)
     $('#search-box').hide();
 }
 </script>
-<form action="http://localhost/ecommerce/purchase/save" method="post">
+<form action="<?php echo base_url(); ?>purchase/save" method="post">
 <div class="box box-danger">
     <div class="box-header with-border">
         <h3 class="box-title">Heading</h3>
     </div>
     <div class="box-body">
         <div class="row" style="padding: 10px">
-            <form action="" method="post">
+            
                 <fieldset style="padding: 10px">
 
                 <div class="col-xs-2">
@@ -193,6 +244,7 @@ function on_search_item_click(item)
                         'name' => 'txt_invoice_number',
                         'id' => 'txt_invoice_number',
                         'placeholder' => 'Invoice Number',
+                        'required' => 'Invoice Number is Required',
                         'class' => 'form-control'
                     );
 
@@ -210,6 +262,7 @@ function on_search_item_click(item)
                         'name' => 'txt_purchase_date',
                         'id' => '',
                         'placeholder' => 'Date',
+                        'required' => 'Purchase Date required',
                         'class' => 'form-control'
                     );
 
@@ -225,6 +278,7 @@ function on_search_item_click(item)
                         'name' => '',
                         'id' => '',
                         'placeholder' => 'Search Supplier',
+                        'required' => 'ISupplier Required or Add new ',
                         'class' => 'form-control'
                     );
 
@@ -235,6 +289,7 @@ function on_search_item_click(item)
                         'name' => 'txt_id_supplier',
                         'id' => 'txt_id_supplier',
                         'placeholder' => 'Search Supplier',
+                        
                         'class' => 'form-control',
                         'value' => 1
                     );
@@ -246,6 +301,9 @@ function on_search_item_click(item)
                 <div class="col-xs-1">
                
                     <?php echo form_submit(array('id' => 'submit', 'value' => 'Add', 'class' => 'fa fa-user-plus btn btn-success pull-right')); ?>
+                </div>
+                <div class="col-xs-offset-10">
+                    <input type="submit" name="" value="Purchase" class="btn btn-success" onclick="return confirm('Are You Sure?')"/>
                 </div>
                 
 
@@ -261,7 +319,14 @@ function on_search_item_click(item)
                         <th>Total</th>
                         <th></th>
                     </tr>
- </table>   
+ </table>  
+        <div class="row" style="padding-left: 10px">
+            <div class="col-md-4">
+                 <input onkeyup="return search_item(this.value);" type="text" class="form-control purchase_search" placeholder="Search Product....">
+                 <div id="search-box"></div>
+            </div>
+           
+        </div>
  <table class="table" style="margin: 10px;">                
 <tr>
                        
@@ -269,8 +334,26 @@ function on_search_item_click(item)
                         <td  width="150"></td>
                         <td  width="150"></td>
                         <td width="150" style="text-align: right"><b>Discount</b></td> 
-                        <td width="100" ><input name="txt_discount_perct" id="txt_discount_perct" type="text" class="form-control" placeholder="%"></td>
-                        <td width="100"><input name="txt_discount_tk" id="txt_discount_tk" type="text" class="form-control" placeholder="TK"></td>
+                        <td width="100" >
+                            <input 
+                                name="txt_discount_perct" 
+                                id="txt_discount_perct" 
+                                type="text" 
+                                class="form-control" 
+                                placeholder="%"
+                                onkeyup="ptc_to_amount($(this),'txt_discount_tk')"
+                                ></td>
+                        <td width="100">
+                            <input 
+                                value="0" 
+                                name="txt_discount_tk" 
+                                id="txt_discount_tk" 
+                                type="text" 
+                                class="form-control" 
+                                placeholder="TK" 
+                                onkeyup="grand_total()"
+                                >
+                        </td>
                         <td width="50"></td>
                       
                     </tr>
@@ -280,8 +363,25 @@ function on_search_item_click(item)
                         <td  width="150"></td>
                         <td  width="150"></td>
                         <td width="150" style="text-align: right"><b>Vat</b></td> 
-                        <td width="100" ><input name="txt_vat_perct" id="txt_vat_perct" type="text" class="form-control" placeholder="%"></td>
-                        <td width="100"><input name="txt_vat_tk" id="txt_vat_tk" type="text" class="form-control" placeholder="TK"></td>
+                        <td width="100" >
+                            <input 
+                                name="txt_vat_perct" 
+                                id="txt_vat_perct" 
+                                type="text" 
+                                class="form-control" 
+                                placeholder="%"
+                                onkeyup="ptc_to_amount($(this),'txt_vat_tk')"
+                                ></td>
+                        <td width="100">
+                            <input  
+                                value="0" 
+                                name="txt_vat_tk" 
+                                id="txt_vat_tk" 
+                                type="text" 
+                                class="form-control" 
+                                placeholder="TK" 
+                                onkeyup="grand_total()"
+                                ></td>
                         <td width="50"></td>
                       
                     </tr>
@@ -292,11 +392,29 @@ function on_search_item_click(item)
                         <td  width="150"></td>
                         <td width="150" style="text-align: right">
                             <b>Tax</b></td> 
-                       <td width="100" ><input name="txt_tax_perct" id="txt_tax_perct" type="text"  class="form-control" placeholder="%"></td>
-                        <td width="100"><input name="txt_tax_tk" id="txt_tax_tk" type="text" class="form-control" placeholder="TK"></td>
+                       <td width="100" >
+                           <input 
+                               name="txt_tax_perct" 
+                               id="txt_tax_perct" 
+                               type="text"  
+                               class="form-control" 
+                               placeholder="%"
+                               onkeyup="ptc_to_amount($(this),'txt_tax_tk')"
+                               ></td>
+                        <td width="100">
+                            <input  
+                                value="0" 
+                                name="txt_tax_tk" 
+                                id="txt_tax_tk" 
+                                type="text" 
+                                class="form-control" 
+                                placeholder="TK" 
+                                onkeyup="grand_total()"
+                                ></td>
                         <td width="50"></td>
                       
                     </tr>
+                    
                     <tr>
                        
                         <td></td>
@@ -304,7 +422,7 @@ function on_search_item_click(item)
                         <td  width="150"></td>
                         <td width="150" style="text-align: right"><b>Total</b></td>
                         <td width="50" ></td>
-                        <td width="150" colspan=""><input name="txt_total" id="txt_total" type="text" class="form-control" ></td>
+                        <td width="150" colspan=""><input  value="0" readonly name="txt_total" id="txt_total" type="text" class="form-control" ></td>
                         <td width="50"></td>
                       
                     </tr>
@@ -315,7 +433,16 @@ function on_search_item_click(item)
                         <td  width="150"></td>
                         <td width="150" style="text-align: right"><b>Paid</b></td> 
                         <td width="50" ></td>
-                        <td width="150"><input name="txt_paid" id="txt_paid" type="text" class="form-control" ></td>
+                        <td width="150">
+                            <input 
+                                onclick="field_click_to_alter($(this),'txt_due')" 
+                                onkeyup="payment_receive($(this),'txt_due')" 
+                                value="0" 
+                                name="txt_paid" 
+                                id="txt_paid" 
+                                type="text" 
+                                class="form-control" >
+                        </td>
                         <td width="50"></td>
                       
                     </tr>
@@ -326,28 +453,22 @@ function on_search_item_click(item)
                         <td  width="150"></td>
                         <td width="150" style="text-align: right"><b>Due</b></td> 
                         <td width="50" ></td>
-                        <td width="150" style=""><input name="txt_due" id="txt_due" type="text" class="form-control" ></td>
+                        <td width="150" style=""><input  value="0" name="txt_due" id="txt_due" type="text" class="form-control" ></td>
                         <td width="50"></td>
                       
                     </tr>
                 </table>
                 
-            </form>
+            
             
         </div>
         <div class="row">
             <div class="col-md-offset-10">
                 <input type="hidden" name="txt_sub_total" class="sub_total_hidden">
-                <span>Grand Total</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="grand_total">0</span>
+                <span><input type="submit" name="" value="Purchase" class="btn btn-success" /></span>
             </div>
         </div>
-        <div class="row" style="padding-left: 10px">
-            <div class="col-md-4">
-                 <input onkeyup="return search_item(this.value);" type="text" class="form-control purchase_search" placeholder="Search Product....">
-                 <div id="search-box"></div>
-            </div>
-           
-        </div>
+
     </div>
     <!-- /.box-body -->
 </div>

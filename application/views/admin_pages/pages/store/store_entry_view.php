@@ -19,22 +19,7 @@
         </h4>
         <form action="<?php echo base_url();?>store_entry/fn_save" method="post" class="form-horizontal" enctype="multipart/form-data">
             <div class="box-body">
-                <div class="form-group">
-                    <label  class="col-sm-2 control-label">Store ID:</label>
 
-                    <div class="col-sm-9">
-                        <?php
-                        $data = array(
-                            'type' => 'text',
-                            'name' => 'txt_store_id',
-                            'id' => 'txt_store_id',
-                            'class' => 'form-control'
-                        );
-
-                        echo form_input($data);
-                        ?>
-                    </div>
-                </div>
                 <div class="form-group">
                     <label  class="col-sm-2 control-label">Store Name:</label>
 
